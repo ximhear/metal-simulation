@@ -99,8 +99,8 @@ struct ContentView: View {
                     Spacer()
                     VStack(alignment: .trailing, spacing: 6) {
                         HStack(spacing: 6) {
-                            Circle().fill(model.isPlaying ? accent : .orange).frame(width: 5, height: 5)
-                            Text(model.isPlaying ? "LIVE" : "PAUSED").font(.system(size: 10, design: .monospaced))
+                            Circle().fill(model.isPreparing ? .orange : model.isPlaying ? accent : .orange).frame(width: 5, height: 5)
+                            Text(model.isPreparing ? "준비 중" : model.isPlaying ? "LIVE" : "PAUSED").font(.system(size: 10, design: .monospaced))
                         }
                         .padding(9).background(.black.opacity(0.25), in: Capsule())
                         RecordingBadge(recorder: model.recorder)
@@ -137,13 +137,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 12) {
                     sectionLabel("SCENARIOS", subtitle: "은하 실험")
-                    Picker("시나리오", selection: $model.preset) {
-                        ForEach(EncounterPreset.allCases) { preset in
-                            Label(preset.rawValue, systemImage: preset.icon).tag(preset)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityLabel("은하 시뮬레이션 시나리오")
+                    ScenarioPicker(selection: $model.preset)
                     if model.preset == .prograde || model.preset == .retrograde {
                         Button(model.preset == .prograde ? "같은 궤도로 역행 실험" : "같은 궤도로 순행 실험") {
                             model.preset = model.preset == .prograde ? .retrograde : .prograde

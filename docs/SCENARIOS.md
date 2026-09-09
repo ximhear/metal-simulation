@@ -10,7 +10,7 @@
 
 ## 관측 방법
 
-시나리오 메뉴에서 항목을 고르면 초기 조건과 권장 카메라가 적용됩니다. 경과 시간은 `SIM TIME`으로 확인합니다. 고리·막대·비교 실험은 원반을 위에서 보며 시작합니다. 왜소은하·껍질 실험은 **동반 은하 별 강조**가 자동으로 켜집니다. 이 옵션은 주은하를 어둡게 그릴 뿐 질량이나 계산을 변경하지 않습니다.
+iPhone에서는 시나리오 버튼을 누르면 선택 목록이 열립니다. 항목을 고르면 목록이 먼저 닫히고 초기 조건과 권장 카메라가 적용됩니다. v1.1.1부터 초기 분포 테이블·Metal 준비·첫 중력 계산은 별도 직렬 작업 큐에서 수행합니다. 준비 중에는 기존 장면을 유지하고 표시를 바꾸며, 연속 선택 시 취소된 결과는 적용하지 않습니다. 경과 시간은 `SIM TIME`으로 확인합니다. 고리·막대·비교 실험은 원반을 위에서 보며 시작합니다. 왜소은하·껍질 실험은 **동반 은하 별 강조**가 자동으로 켜집니다. 이 옵션은 주은하를 어둡게 그릴 뿐 질량이나 계산을 변경하지 않습니다.
 
 | 실험 | 초기 조건 | 관찰할 시점과 특징 |
 |---|---|---|
@@ -90,3 +90,16 @@ macOS와 iOS Simulator 빌드·실행 화면을 확인했고, 실제 **iPhone 13
 - [Mihos: 조석 잔해와 순행·역행](https://ned.ipac.caltech.edu/level5/Sept03/Mihos/Mihos1.html)
 - [방사형 충돌과 껍질 구조 연구](https://arxiv.org/abs/2006.08764)
 - [살아 있는 헤일로에서 막대의 형성과 진화](https://academic.oup.com/mnras/article/527/3/7781/7452906)
+
+### 선택 응답성 검사 (v1.1.1)
+
+```sh
+swiftc GalaxyCollision/Physics/Encounter.swift \
+  GalaxyCollision/Physics/EquilibriumTables.swift \
+  GalaxyCollision/Rendering/GalaxyDynamics.swift \
+  GalaxyCollision/Rendering/GalaxyPreparation.swift \
+  Scripts/PreparationSmoke.swift -o /tmp/galaxy-preparation-smoke
+/tmp/galaxy-preparation-smoke
+```
+
+메인 액터의 10ms 주기 작업이 은하 준비 중에도 진행되는지, 취소된 요청의 완료가 전달되지 않는지, 준비 완료 후 GPU 버퍼로 적분이 가능한지 검사합니다. M2 Pro의 비최적화 검증 실행에서 226회 응답, 최대 간격 약 25ms를 확인했습니다. 이 수치는 iPhone에서 측정한 메뉴 닫힘 시간은 아닙니다.

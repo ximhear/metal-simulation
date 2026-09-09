@@ -4,6 +4,7 @@ import SwiftUI
 final class SimulationModel: ObservableObject {
     let recorder = GalaxyRecorder()
     @Published var isPlaying = true
+    @Published var isPreparing = false
     @Published var exposure: Double = 1
     @Published var zoom: Double = 1
     @Published var yaw: Float = 0

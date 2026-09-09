@@ -27,6 +27,10 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
     private var recordingTexture: MTLTexture?
     private var dynamics: GalaxyDynamics?
     private var generation = -1
+    private var requestedGeneration = -1
+    private var requestedCount = 0
+    private let preparation = GalaxyPreparation()
+    private var preparationTicket: GalaxyPreparation.Ticket?
     private var count = 0
     private var lastTime: CFTimeInterval = 0
     private var accumulator: Double = 0
@@ -72,13 +76,47 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
-    func stopRecording() { model.recorder.stop() }
+    func stopRecording() {
+        preparationTicket?.cancel()
+        model.recorder.stop()
+    }
+
+    private func prepareIfNeeded() {
+        guard requestedGeneration != model.generation || requestedCount != model.particleCount else { return }
+        preparationTicket?.cancel()
+        let nextGeneration = model.generation
+        let nextCount = model.particleCount
+        let nextPreset = model.preset
+        requestedGeneration = nextGeneration
+        requestedCount = nextCount
+        model.isPreparing = true
+        preparationTicket = preparation.prepare(device: device, library: library, commandQueue: queue,
+                                                 starCount: nextCount, preset: nextPreset) { [weak self] result in
+            guard let self, self.model.generation == nextGeneration,
+                  self.model.particleCount == nextCount, self.model.preset == nextPreset else { return }
+            self.model.isPreparing = false
+            switch result {
+            case .success(let system):
+                self.dynamics = system
+                self.count = nextCount
+                self.generation = nextGeneration
+                self.accumulator = 0
+                self.lastTime = 0
+                self.stepGPUSeconds = 0.016
+                self.model.elapsed = 0
+            case .failure(let error):
+                self.model.error = error.localizedDescription
+                self.model.recorder.stop()
+            }
+        }
+    }
 
     func draw(in view: MTKView) {
         let now = CACurrentMediaTime()
         let wallDelta = lastTime == 0 ? 0 : min(now - lastTime, 0.05)
         lastTime = now
         guard model.isActive, model.error == nil else { model.recorder.stop(); return }
+        prepareIfNeeded()
         guard inFlight.wait(timeout: .now()) == .success else { return }
         guard let pass = view.currentRenderPassDescriptor, let drawable = view.currentDrawable,
               let command = queue.makeCommandBuffer() else { inFlight.signal(); return }
@@ -87,17 +125,7 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
         var submittedSteps = 0
 
         do {
-            if generation != model.generation || count != model.particleCount {
-                let system = try GalaxyDynamics(device: device, library: library,
-                                                starCount: model.particleCount, preset: model.preset)
-                try system.initialize(command: command)
-                submittedSteps = 1
-                stepGPUSeconds = 0.016
-                dynamics = system
-                count = model.particleCount
-                generation = model.generation
-                accumulator = 0
-            } else if model.isPlaying {
+            if generation == model.generation && count == model.particleCount && model.isPlaying {
                 accumulator += wallDelta
                 // Long steps should produce a frame individually. Fast devices
                 // may batch two steps to keep the fixed-step cadence.
@@ -157,7 +185,7 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
         frames += 1
         if now - statsTime > 0.5 {
             if statsTime != 0 { model.fps = Double(frames) / (now - statsTime) }
-            model.elapsed = dynamics?.time ?? 0
+            if !model.isPreparing { model.elapsed = dynamics?.time ?? 0 }
             frames = 0
             statsTime = now
         }
@@ -194,9 +222,11 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
             encoder.setVertexBytes(&uniforms, length: MemoryLayout<RenderUniforms>.stride, index: 1)
             encoder.setRenderPipelineState(backgroundPipeline)
             encoder.drawPrimitives(type: .point, vertexStart: 0, vertexCount: 900)
-            encoder.setRenderPipelineState(starPipeline)
-            encoder.setVertexBuffer(dynamics?.particles, offset: 0, index: 0)
-            encoder.drawPrimitives(type: .point, vertexStart: 0, vertexCount: model.showHalo ? (dynamics?.count ?? count) : count)
+            if let dynamics {
+                encoder.setRenderPipelineState(starPipeline)
+                encoder.setVertexBuffer(dynamics.particles, offset: 0, index: 0)
+                encoder.drawPrimitives(type: .point, vertexStart: 0, vertexCount: model.showHalo ? dynamics.count : count)
+            }
             encoder.endEncoding()
             guard let tone = command.makeRenderCommandEncoder(descriptor: pass) else { return false }
             tone.setRenderPipelineState(tonePipeline)
