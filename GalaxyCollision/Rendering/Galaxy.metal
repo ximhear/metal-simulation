@@ -9,6 +9,8 @@ struct DynamicsUniforms {
     uint count, starCount, galaxyCount, seed;
     float dt, softening, theta;
     uint mode;
+    float4 model0, model1, component0, component1;
+    uint4 allocation;
 };
 struct RenderUniforms { float4x4 transform; float4 appearance; };
 struct StarVertex { float4 position [[position]]; float size [[point_size]]; float4 color; };
@@ -34,14 +36,20 @@ kernel void initializeGalaxies(device Particle *p [[buffer(0)]], constant Dynami
     if (id >= u.count) return;
     bool halo = id >= u.starCount;
     uint populationCount = halo ? u.count - u.starCount : u.starCount;
-    uint perGalaxy = populationCount / u.galaxyCount;
     uint populationID = halo ? id - u.starCount : id;
-    uint galaxy = populationID / perGalaxy;
-    uint local = populationID % perGalaxy;
+    uint first = halo ? u.allocation.y : u.allocation.x;
+    uint galaxy = populationID < first ? 0 : 1;
+    uint perGalaxy = galaxy == 0 ? first : populationCount - first;
+    uint local = galaxy == 0 ? populationID : populationID - first;
+    float4 model = galaxy == 0 ? u.model0 : u.model1;
+    float4 component = galaxy == 0 ? u.component0 : u.component1;
+    radii += galaxy * 4096;
+    speeds += galaxy * 256 * 128;
+    kinematics += galaxy * 256;
     uint seed = local / 2 + u.seed * 747796405u + galaxy * 2891336453u + (halo ? 10000019u : 0u);
     float4 center = galaxy == 0 ? u.center0 : u.center1;
     float3 position, velocity;
-    if (halo) {
+    if (halo || model.w > 0.5) {
         float q = clamp(random01(seed) * 4096 - 0.5, 0.0, 4094.999);
         uint q0 = uint(q);
         float r = mix(radii[q0], radii[q0 + 1], fract(q));
@@ -60,19 +68,19 @@ kernel void initializeGalaxies(device Particle *p [[buffer(0)]], constant Dynami
         }
         float angle = random01(seed + 101) * 2 * M_PI_F;
         float zq = clamp(random01(seed + 102), 0.0001, 0.9999);
-        float z = 0.1 * log(zq / (1 - zq));
+        float z = component.z * 0.5 * log(zq / (1 - zq));
         float3 radial = float3(cos(angle), sin(angle), 0);
         float3 tangent = float3(-sin(angle), cos(angle), 0);
         float row = radiusRow(r);
         float4 k = mix(kinematics[uint(row)], kinematics[uint(row) + 1], fract(row));
         position = radial * r + float3(0, 0, z);
-        velocity = radial * (k.y * gaussian(seed + 110)) + tangent * (k.x + k.z * gaussian(seed + 120))
+        velocity = radial * (k.y * gaussian(seed + 110)) + tangent * (model.z * (k.x + k.z * gaussian(seed + 120)))
                  + float3(0, 0, k.w * gaussian(seed + 130));
     }
     float sign = (local & 1u) == 0 ? 1.0 : -1.0;
-    position = tilted(position * sign, center.w) + center.xyz;
-    velocity = tilted(velocity * sign, center.w) + (galaxy == 0 ? u.bulk0.xyz : u.bulk1.xyz);
-    p[id].position = float4(position, (halo ? 17.0 : 3.0) / float(perGalaxy));
+    position = tilted(position * (sign * model.y), center.w) + center.xyz;
+    velocity = tilted(velocity * (sign * sqrt(model.x / model.y)), center.w) + (galaxy == 0 ? u.bulk0.xyz : u.bulk1.xyz);
+    p[id].position = float4(position, (halo ? component.y : component.x) * model.x / float(perGalaxy));
     p[id].velocity = float4(velocity, float(galaxy + (halo ? 2 : 0)));
 }
 
@@ -302,7 +310,8 @@ vertex StarVertex starVertex(uint id [[vertex_id]],
     bool halo = p.velocity.w >= 2.0;
     float3 color = fmod(p.velocity.w, 2.0) < 0.5 ? cool : warm;
     if (halo) color = mix(color, float3(0.4, 0.45, 0.5), 0.7);
-    out.color = float4(color, u.appearance.y * (halo ? 0.07 : 1.0));
+    float emphasis = u.appearance.z > 0.5 && fmod(p.velocity.w, 2.0) < 0.5 ? 0.12 : 1.0;
+    out.color = float4(color, u.appearance.y * (halo ? 0.07 : 1.0) * emphasis);
     return out;
 }
 

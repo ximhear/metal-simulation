@@ -15,6 +15,7 @@ final class SimulationModel: ObservableObject {
     @Published var particleCount = 8_192
     #endif
     @Published var showHalo = false
+    @Published var emphasizeCompanion = false
     @Published var generation = 0
     @Published var elapsed: Float = 0
     @Published var fps: Double = 0
@@ -29,8 +30,8 @@ final class SimulationModel: ObservableObject {
     }
 
     func resetCamera() {
-        zoom = 1
+        zoom = preset.zoom
         yaw = 0
-        pitch = 0.42
+        pitch = preset.pitch
     }
 }

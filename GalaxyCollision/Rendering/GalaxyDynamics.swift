@@ -60,16 +60,29 @@ final class GalaxyDynamics {
         low = try buffer(nodeCount * 16, "Tree lower bounds and size")
         high = try buffer(nodeCount * 16, "Tree upper bounds")
         scratch = try buffer(((count + 255) / 256) * 32, "Bounds reduction")
-        let tables = EquilibriumTables.shared
+        let configuration = EncounterConfiguration(preset: preset)
+        func tables(_ definition: GalaxyDefinition) -> EquilibriumTables {
+            if !definition.spherical && definition.stellarMass == 3 && definition.haloMass == 17
+                && definition.radiusScale == 1 && definition.toomreQ == 1.6 { return .shared }
+            return EquilibriumTables(
+                diskMass: definition.spherical ? 0 : Double(definition.stellarMass),
+                haloMass: definition.spherical ? Double(definition.stellarMass + definition.haloMass) : Double(definition.haloMass),
+                haloScale: definition.spherical ? 1 : GalaxyPhysics.haloScale,
+                cutoff: definition.spherical ? 6 : GalaxyPhysics.haloCutoff,
+                height: Double(definition.height), toomreQ: Double(definition.toomreQ),
+                softening: Double(GalaxyPhysics.softening / definition.radiusScale))
+        }
+        let firstTables = tables(configuration.primary)
+        let secondTables = preset.isSingle ? firstTables : tables(configuration.secondary)
         func upload<T>(_ values: [T]) throws -> MTLBuffer {
             guard let b = values.withUnsafeBytes({ bytes in device.makeBuffer(bytes: bytes.baseAddress!, length: bytes.count, options: .storageModeShared) }) else {
                 throw DynamicsError.failure("초기 은하 모델을 GPU에 올릴 수 없습니다.")
             }
             return b
         }
-        radialTable = try upload(tables.haloRadii)
-        speedTable = try upload(tables.haloSpeeds)
-        diskTable = try upload(tables.diskKinematics)
+        radialTable = try upload(firstTables.haloRadii + secondTables.haloRadii)
+        speedTable = try upload(firstTables.haloSpeeds + secondTables.haloSpeeds)
+        diskTable = try upload(firstTables.diskKinematics + secondTables.diskKinematics)
     }
 
     private func encode(_ name: String, count: Int, command: MTLCommandBuffer, bindings: (MTLComputeCommandEncoder) -> Void) throws {

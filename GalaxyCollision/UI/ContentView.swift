@@ -42,7 +42,7 @@ struct ContentView: View {
         .onChange(of: model.preset) { _, preset in
             model.restart()
             model.resetCamera()
-            if preset == .isolated { model.zoom = 1.7 }
+            model.emphasizeCompanion = preset == .stream || preset == .shells
         }
         .onChange(of: model.particleCount) { _, _ in model.restart() }
         .sheet(isPresented: $showInfo) { modelInfo }
@@ -93,7 +93,7 @@ struct ContentView: View {
             VStack(alignment: .leading) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(model.preset == .isolated ? "01 / ISOLATION TEST" : "01 / LIVE GRAVITY").font(.system(size: 10, design: .monospaced)).tracking(2).foregroundStyle(accent)
+                        Text(model.preset.isSingle ? "01 / ISOLATED EVOLUTION" : "01 / LIVE GRAVITY").font(.system(size: 10, design: .monospaced)).tracking(2).foregroundStyle(accent)
                         Text(model.preset.rawValue).font(.system(size: 25, weight: .light))
                     }
                     Spacer()
@@ -110,7 +110,7 @@ struct ContentView: View {
                 HStack {
                     HStack(spacing: 14) {
                         legend("은하 A", color: accent)
-                        if model.preset != .isolated { legend("은하 B", color: .orange) }
+                        if !model.preset.isSingle { legend("은하 B", color: .orange) }
                     }
                     Spacer()
                     Text("드래그로 회전").font(.system(size: 10)).foregroundStyle(.secondary)
@@ -136,26 +136,21 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 12) {
-                    sectionLabel("ENCOUNTER", subtitle: "충돌 시나리오")
-                    ForEach(EncounterPreset.allCases) { preset in
-                        Button {
-                            model.preset = preset
-                        } label: {
-                            HStack {
-                                Image(systemName: preset == .isolated ? "scope" : preset == .tidal ? "hurricane" : preset == .headOn ? "arrow.right.and.line.vertical.and.arrow.left" : "arrow.up.right")
-                                    .frame(width: 22)
-                                Text(preset.rawValue).font(.system(size: 13, weight: .medium))
-                                Spacer()
-                                if model.preset == preset { Circle().fill(accent).frame(width: 6, height: 6) }
-                            }
-                            .padding(13)
-                            .foregroundStyle(model.preset == preset ? accent : .secondary)
-                            .background(model.preset == preset ? accent.opacity(0.08) : .white.opacity(0.025), in: RoundedRectangle(cornerRadius: 9))
-                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(model.preset == preset ? accent.opacity(0.35) : .white.opacity(0.06)))
+                    sectionLabel("SCENARIOS", subtitle: "은하 실험")
+                    Picker("시나리오", selection: $model.preset) {
+                        ForEach(EncounterPreset.allCases) { preset in
+                            Label(preset.rawValue, systemImage: preset.icon).tag(preset)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(model.preset == preset ? .isSelected : [])
                     }
+                    .pickerStyle(.menu)
+                    .accessibilityLabel("은하 시뮬레이션 시나리오")
+                    if model.preset == .prograde || model.preset == .retrograde {
+                        Button(model.preset == .prograde ? "같은 궤도로 역행 실험" : "같은 궤도로 순행 실험") {
+                            model.preset = model.preset == .prograde ? .retrograde : .prograde
+                        }
+                        .font(.system(size: 12)).buttonStyle(.bordered)
+                    }
+                    Text(model.preset.observation).font(.system(size: 11)).foregroundStyle(accent).fixedSize(horizontal: false, vertical: true)
                     Text(model.preset.detail).font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                 }
                 Divider()
@@ -175,6 +170,9 @@ struct ContentView: View {
                     controlSlider("확대", value: $model.zoom, range: 0.4...3, text: String(format: "%.1f×", model.zoom))
                     controlSlider("별 밝기", value: $model.exposure, range: 0.25...2.5, text: String(format: "%.1f", model.exposure))
                     Toggle("암흑물질 분포 보기", isOn: $model.showHalo).font(.system(size: 12))
+                    if !model.preset.isSingle {
+                        Toggle("동반 은하 별 강조", isOn: $model.emphasizeCompanion).font(.system(size: 12))
+                    }
                     HStack {
                         Button("위에서 보기") { model.pitch = 0; model.yaw = 0 }
                         Spacer()
@@ -242,7 +240,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("작은 별들, 거대한 만남").font(.title2.bold())
             Text("별과 암흑물질 입자 모두가 질량을 가진 N-body 시뮬레이션입니다. 분포가 바뀌면 중력장도 바뀌며, 은하 궤도의 에너지가 내부 운동으로 전달될 수 있습니다. 입자 하나는 여러 별 또는 암흑물질의 질량을 대표합니다.")
-            Text("별은 두께와 속도 분산을 가진 지수 원반, 암흑물질은 바깥쪽이 완만하게 잘린 구형 헤일로로 시작합니다. 단독 은하 검증 모드로 초기 모델의 변화를 따로 관찰할 수 있습니다.")
+            Text("기본 별 분포는 두께와 속도 분산이 있는 지수 원반입니다. 위성과 껍질 실험은 구형 별 분포를 사용하고, 막대 실험은 원반 질량 비율을 높입니다. 각 은하의 질량과 크기에 맞춰 초기 속도를 계산합니다.")
             Text("먼 입자 묶음의 중력은 트리로 근사하며, 가까운 입자는 직접 계산합니다. 가스·별 생성·블랙홀은 포함하지 않습니다. 초기 평형과 중력 계산에도 근사가 있으므로 관측 천체를 정밀 예측하는 연구용 모델은 아닙니다. 단위는 무차원이며 G = 1입니다.")
                 .foregroundStyle(.secondary)
             Button("관측 계속하기") { showInfo = false }.buttonStyle(.borderedProminent)

@@ -14,9 +14,14 @@ public struct EquilibriumTables {
     public let haloSpeeds: [Float]
     public let diskKinematics: [SIMD4<Float>]
 
-    public init() {
-        let n = 2048, a = GalaxyPhysics.haloScale, cutoff = GalaxyPhysics.haloCutoff
-        let mh = GalaxyPhysics.haloMass, md = GalaxyPhysics.diskMass
+    public init(diskMass md: Double = GalaxyPhysics.diskMass,
+                haloMass mh: Double = GalaxyPhysics.haloMass,
+                haloScale a: Double = GalaxyPhysics.haloScale,
+                cutoff: Double = GalaxyPhysics.haloCutoff,
+                height: Double = GalaxyPhysics.diskHeight,
+                toomreQ: Double = 1.6,
+                softening epsilon: Double = Double(GalaxyPhysics.softening)) {
+        let n = 2048
         let radii = (0..<n).map { exp(log(0.0001) + Double($0) / Double(n - 1) * log(150 / 0.0001)) }
         var rho = radii.map { r in a / (2 * Double.pi * r * pow(r + a, 3)) * exp(-pow(r / cutoff, 2)) }
         var mass = [Double](repeating: 0, count: n)
@@ -83,8 +88,6 @@ public struct EquilibriumTables {
         haloSpeeds = speeds
 
         let diskR = (0..<Self.radiusBins).map { Self.minRadius * pow(Self.maxRadius / Self.minRadius, Double($0) / Double(Self.radiusBins - 1)) }
-        let epsilon = Double(GalaxyPhysics.softening)
-        let height = GalaxyPhysics.diskHeight
         let vc2 = diskR.map { radius -> Double in
             var inward = 0.0
             // Axisymmetric ring quadrature, softened to approximate disk thickness.
@@ -105,7 +108,7 @@ public struct EquilibriumTables {
             let derivative = (vc2[hi] - vc2[lo]) / (diskR[hi] - diskR[lo])
             let kappa = sqrt(max(0.001, derivative / r + 2 * vc2[i] / (r * r)))
             let sigma = md / (2 * .pi) * exp(-r)
-            let sigmaR = max(0.025, min(0.4 * sqrt(vc2[i]), 1.6 * 3.36 * sigma / kappa))
+            let sigmaR = max(0.025, min(0.4 * sqrt(vc2[i]), toomreQ * 3.36 * sigma / kappa))
             let sigmaPhi = sigmaR * min(1, kappa * r / (2 * sqrt(vc2[i])))
             let rotation = sqrt(max(0.05 * vc2[i], vc2[i] + sigmaR * sigmaR * (1 - 2 * r) - sigmaPhi * sigmaPhi))
             let haloOmega2 = interpolate(r, xs: radii, ys: mass) / pow(r * r + epsilon * epsilon, 1.5)
