@@ -63,12 +63,17 @@ final class GalaxyDynamics {
         let configuration = EncounterConfiguration(preset: preset)
         func tables(_ definition: GalaxyDefinition) -> EquilibriumTables {
             if !definition.spherical && definition.stellarMass == 3 && definition.haloMass == 17
-                && definition.radiusScale == 1 && definition.toomreQ == 1.6 { return .shared }
+                && definition.radiusScale == 1 && definition.toomreQ == 1.6
+                && definition.bulgeMass == 0 && definition.haloScale == 3 && definition.haloCutoff == 18
+                && definition.height == 0.2 { return .shared }
             return EquilibriumTables(
                 diskMass: definition.spherical ? 0 : Double(definition.stellarMass),
+                bulgeMass: Double(definition.bulgeMass),
+                bulgeScale: Double(definition.bulgeScale), bulgeCutoff: Double(definition.bulgeCutoff),
                 haloMass: definition.spherical ? Double(definition.stellarMass + definition.haloMass) : Double(definition.haloMass),
-                haloScale: definition.spherical ? 1 : GalaxyPhysics.haloScale,
-                cutoff: definition.spherical ? 6 : GalaxyPhysics.haloCutoff,
+                haloScale: definition.spherical ? 1 : Double(definition.haloScale),
+                cutoff: definition.spherical ? 6 : Double(definition.haloCutoff),
+                speedMaxRadius: Double(definition.speedRadius),
                 height: Double(definition.height), toomreQ: Double(definition.toomreQ),
                 softening: Double(GalaxyPhysics.softening / definition.radiusScale))
         }
@@ -80,8 +85,8 @@ final class GalaxyDynamics {
             }
             return b
         }
-        radialTable = try upload(firstTables.haloRadii + secondTables.haloRadii)
-        speedTable = try upload(firstTables.haloSpeeds + secondTables.haloSpeeds)
+        radialTable = try upload(firstTables.haloRadii + firstTables.bulgeRadii + secondTables.haloRadii + secondTables.bulgeRadii)
+        speedTable = try upload(firstTables.haloSpeeds + firstTables.bulgeSpeeds + secondTables.haloSpeeds + secondTables.bulgeSpeeds)
         diskTable = try upload(firstTables.diskKinematics + secondTables.diskKinematics)
     }
 

@@ -11,6 +11,7 @@ struct DynamicsUniforms {
     uint mode;
     float4 model0, model1, component0, component1;
     uint4 allocation;
+    float4 shape0, shape1;
 };
 struct RenderUniforms { float4x4 transform; float4 appearance; };
 struct StarVertex { float4 position [[position]]; float size [[point_size]]; float4 color; };
@@ -43,26 +44,30 @@ kernel void initializeGalaxies(device Particle *p [[buffer(0)]], constant Dynami
     uint local = galaxy == 0 ? populationID : populationID - first;
     float4 model = galaxy == 0 ? u.model0 : u.model1;
     float4 component = galaxy == 0 ? u.component0 : u.component1;
-    radii += galaxy * 4096;
-    speeds += galaxy * 256 * 128;
+    float4 shape = galaxy == 0 ? u.shape0 : u.shape1;
+    uint bulgeCount = galaxy == 0 ? u.allocation.z : u.allocation.w;
+    bool bulge = !halo && local < bulgeCount;
+    uint componentCount = halo ? perGalaxy : bulge ? bulgeCount : perGalaxy - bulgeCount;
+    radii += (galaxy * 2 + (bulge ? 1 : 0)) * 4096;
+    speeds += (galaxy * 2 + (bulge ? 1 : 0)) * 256 * 128;
     kinematics += galaxy * 256;
     uint seed = local / 2 + u.seed * 747796405u + galaxy * 2891336453u + (halo ? 10000019u : 0u);
     float4 center = galaxy == 0 ? u.center0 : u.center1;
     float3 position, velocity;
-    if (halo || model.w > 0.5) {
+    if (halo || bulge || model.w > 0.5) {
         float q = clamp(random01(seed) * 4096 - 0.5, 0.0, 4094.999);
         uint q0 = uint(q);
         float r = mix(radii[q0], radii[q0 + 1], fract(q));
         position = sphere(seed + 1) * r;
-        float row = radiusRow(r), vq = clamp(random01(seed + 3) * 128 - 0.5, 0.0, 126.999);
+        float row = clamp(log(max(r, 0.01) / 0.01) / log(shape.z / 0.01) * 255, 0.0, 254.999), vq = clamp(random01(seed + 3) * 128 - 0.5, 0.0, 126.999);
         uint i = uint(row) * 128 + uint(vq);
         float v0 = mix(speeds[i], speeds[i + 1], fract(vq));
         float v1 = mix(speeds[i + 128], speeds[i + 129], fract(vq));
         velocity = sphere(seed + 4) * mix(v0, v1, fract(row));
     } else {
-        float r = 10;
+        float r = INFINITY;
         uint attempt = 0;
-        while (r > 7) {
+        while (r > shape.x) {
             r = -log(max(1e-8, random01(seed + 31u * attempt) * random01(seed + 31u * attempt + 1)));
             attempt++;
         }
@@ -78,9 +83,13 @@ kernel void initializeGalaxies(device Particle *p [[buffer(0)]], constant Dynami
                  + float3(0, 0, k.w * gaussian(seed + 130));
     }
     float sign = (local & 1u) == 0 ? 1.0 : -1.0;
+    // Initial disk orientation: rotate about y, then x (sky coordinate frame).
+    float cy = cos(shape.y), sy = sin(shape.y);
+    position = float3(cy * position.x + sy * position.z, position.y, -sy * position.x + cy * position.z);
+    velocity = float3(cy * velocity.x + sy * velocity.z, velocity.y, -sy * velocity.x + cy * velocity.z);
     position = tilted(position * (sign * model.y), center.w) + center.xyz;
     velocity = tilted(velocity * (sign * sqrt(model.x / model.y)), center.w) + (galaxy == 0 ? u.bulk0.xyz : u.bulk1.xyz);
-    p[id].position = float4(position, (halo ? component.y : component.x) * model.x / float(perGalaxy));
+    p[id].position = float4(position, (halo ? component.y : bulge ? component.w : component.x) * model.x / float(componentCount));
     p[id].velocity = float4(velocity, float(galaxy + (halo ? 2 : 0)));
 }
 

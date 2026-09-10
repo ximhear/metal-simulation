@@ -11,7 +11,7 @@ import simd
         let env = ProcessInfo.processInfo.environment
         let stars = Int(env["GALAXY_TEST_STARS"] ?? "8192")!
         let steps = Int(env["GALAXY_TEST_STEPS"] ?? "3600")!
-        let presets: [(String, EncounterPreset)] = [("stream", .stream), ("ring", .ring), ("prograde", .prograde), ("retrograde", .retrograde), ("shells", .shells), ("bar", .bar)]
+        let presets: [(String, EncounterPreset)] = [("m51", .m51), ("stream", .stream), ("ring", .ring), ("prograde", .prograde), ("retrograde", .retrograde), ("shells", .shells), ("bar", .bar)]
         let output = env["GALAXY_SNAPSHOTS"]
         if let output { try FileManager.default.createDirectory(atPath: output, withIntermediateDirectories: true) }
         func execute(_ body: (MTLCommandBuffer) throws -> Void) throws {
@@ -26,6 +26,25 @@ import simd
             try execute { try system.initialize(command: $0) }
             let p = system.particles.contents().bindMemory(to: Particle.self, capacity: system.count)
             let a = system.accelerations.contents().bindMemory(to: SIMD4<Float>.self, capacity: system.count)
+            if preset == .m51 {
+                let c = EncounterConfiguration(preset: preset)
+                var masses = [Double](repeating: 0, count: 2)
+                var centers = [SIMD3<Double>](repeating: .zero, count: 2)
+                var bulgeMass = 0.0
+                for i in 0..<system.count {
+                    let galaxy = Int(p[i].velocity.w) % 2
+                    let m = Double(p[i].position.w)
+                    masses[galaxy] += m
+                    centers[galaxy] += m * SIMD3(Double(p[i].position.x), Double(p[i].position.y), Double(p[i].position.z))
+                    if i < Int(system.uniforms.allocation.z) { bulgeMass += m }
+                }
+                precondition(abs(masses[0] - Double(c.primary.totalMass)) < 1e-4)
+                precondition(abs(masses[1] - Double(c.secondary.totalMass)) < 1e-4)
+                precondition(abs(bulgeMass - Double(c.primary.bulgeMass)) < 1e-5)
+                let separation = (centers[1] / masses[1] - centers[0] / masses[0]) * Double(M51Model.lengthKpc)
+                precondition(simd_length(separation - SIMD3<Double>(-21.91, -8.44, -4.25)) < 1e-4,
+                             "GPU initialization changed the literature relative position")
+            }
             if preset == .prograde { progradeInitial = Array(UnsafeBufferPointer(start: p, count: system.count)) }
             if preset == .retrograde, let reference = progradeInitial {
                 for i in 0..<system.count {

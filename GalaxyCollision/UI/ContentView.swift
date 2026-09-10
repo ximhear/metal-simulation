@@ -102,7 +102,7 @@ struct ContentView: View {
             VStack(alignment: .leading) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(model.preset.isSingle ? "01 / ISOLATED EVOLUTION" : "01 / LIVE GRAVITY").font(.system(size: 10, design: .monospaced)).tracking(2).foregroundStyle(accent)
+                        Text(model.preset == .m51 ? "01 / M51 APPROXIMATION" : model.preset.isSingle ? "01 / ISOLATED EVOLUTION" : "01 / LIVE GRAVITY").font(.system(size: 10, design: .monospaced)).tracking(2).foregroundStyle(accent)
                         Text(model.preset.rawValue).font(.system(size: 25, weight: .light))
                     }
                     Spacer()
@@ -118,8 +118,8 @@ struct ContentView: View {
                 Spacer()
                 HStack {
                     HStack(spacing: 14) {
-                        legend("은하 A", color: accent)
-                        if !model.preset.isSingle { legend("은하 B", color: .orange) }
+                        legend(model.preset == .m51 ? "M51 · NGC 5194" : "은하 A", color: accent)
+                        if !model.preset.isSingle { legend(model.preset == .m51 ? "NGC 5195" : "은하 B", color: .orange) }
                     }
                     Spacer()
                     Text("드래그로 회전").font(.system(size: 10)).foregroundStyle(.secondary)
@@ -154,6 +154,10 @@ struct ContentView: View {
                         .font(.system(size: 12)).buttonStyle(.bordered)
                     }
                     Text(model.preset.observation).font(.system(size: 11)).foregroundStyle(accent).fixedSize(horizontal: false, vertical: true)
+                    if model.preset == .m51 {
+                        Link("모델 근거 · Tress et al. (2020)", destination: M51Model.orbitSourceURL)
+                            .font(.system(size: 11))
+                    }
                     Text(model.preset.detail).font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                 }
                 Divider()
@@ -177,7 +181,7 @@ struct ContentView: View {
                         Toggle("동반 은하 별 강조", isOn: $model.emphasizeCompanion).font(.system(size: 12))
                     }
                     HStack {
-                        Button("위에서 보기") { model.orientation = Trackball.identity; lastDragPoint = nil }
+                        Button(model.preset == .m51 ? "하늘 기준 시점" : "위에서 보기") { model.orientation = Trackball.identity; lastDragPoint = nil }
                         Spacer()
                         Button("시점 초기화") { model.resetCamera() }
                     }.font(.system(size: 11)).buttonStyle(.plain).foregroundStyle(accent)
@@ -226,8 +230,8 @@ struct ContentView: View {
             RecordingControls(recorder: model.recorder, compact: !wide, available: model.error == nil && model.isActive)
             Divider().frame(height: 26)
             VStack(alignment: .leading, spacing: 3) {
-                Text("SIM TIME").font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
-                Text(String(format: "%06.2f", model.elapsed)).font(.system(size: 15, design: .monospaced)).monospacedDigit()
+                Text(model.preset == .m51 ? "ELAPSED · Myr" : "SIM TIME").font(.system(size: 8, design: .monospaced)).foregroundStyle(.secondary)
+                Text(String(format: "%06.2f", model.preset == .m51 ? model.elapsed * M51Model.timeMyr : model.elapsed)).font(.system(size: 15, design: .monospaced)).monospacedDigit()
             }
             Spacer(minLength: 0)
             if wide {
@@ -244,7 +248,7 @@ struct ContentView: View {
             Text("작은 별들, 거대한 만남").font(.title2.bold())
             Text("별과 암흑물질 입자 모두가 질량을 가진 N-body 시뮬레이션입니다. 분포가 바뀌면 중력장도 바뀌며, 은하 궤도의 에너지가 내부 운동으로 전달될 수 있습니다. 입자 하나는 여러 별 또는 암흑물질의 질량을 대표합니다.")
             Text("기본 별 분포는 두께와 속도 분산이 있는 지수 원반입니다. 위성과 껍질 실험은 구형 별 분포를 사용하고, 막대 실험은 원반 질량 비율을 높입니다. 각 은하의 질량과 크기에 맞춰 초기 속도를 계산합니다.")
-            Text("먼 입자 묶음의 중력은 트리로 근사하며, 가까운 입자는 직접 계산합니다. 가스·별 생성·블랙홀은 포함하지 않습니다. 초기 평형과 중력 계산에도 근사가 있으므로 관측 천체를 정밀 예측하는 연구용 모델은 아닙니다. 단위는 무차원이며 G = 1입니다.")
+            Text("먼 입자 묶음의 중력은 트리로 근사하며, 가까운 입자는 직접 계산합니다. 가스·별 생성·블랙홀은 포함하지 않습니다. 초기 평형과 중력 계산에도 근사가 있으므로 관측 천체를 정밀 예측하는 연구용 모델은 아닙니다. 내부 계산은 G = 1이며, M51 시나리오는 거리와 시간을 실제 단위로 환산합니다. M51은 연구의 초기 조건을 옮긴 근사 모델로, 현재 관측 모습과의 정량적인 일치를 보장하지 않습니다.")
                 .foregroundStyle(.secondary)
             Button("관측 계속하기") { showInfo = false }.buttonStyle(.borderedProminent)
         }

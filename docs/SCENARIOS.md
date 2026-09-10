@@ -59,7 +59,7 @@ Apple M2 Pro에서 별 8,192 + 암흑물질 8,192개, seed 42, dt=1/60으로 각
 
 ```sh
 swift test
-swiftc -O GalaxyCollision/Physics/Encounter.swift \
+swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift \
   GalaxyCollision/Physics/EquilibriumTables.swift \
   GalaxyCollision/Rendering/GalaxyDynamics.swift \
   Scripts/ScenarioSmoke.swift -o /tmp/galaxy-scenarios
@@ -94,7 +94,7 @@ macOS와 iOS Simulator 빌드·실행 화면을 확인했고, 실제 **iPhone 13
 ### 선택 응답성 검사 (v1.1.1)
 
 ```sh
-swiftc GalaxyCollision/Physics/Encounter.swift \
+swiftc GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift \
   GalaxyCollision/Physics/EquilibriumTables.swift \
   GalaxyCollision/Rendering/GalaxyDynamics.swift \
   GalaxyCollision/Rendering/GalaxyPreparation.swift \
@@ -111,3 +111,7 @@ swiftc GalaxyCollision/Physics/Encounter.swift \
 `위에서 보기`는 항등 회전으로, `시점 초기화`는 각 사례의 초기 기울기로 돌아갑니다. 화면과 녹화는 같은 회전 행렬을 사용합니다. 이 회전은 관측 방향만 바꾸며 입자 중력·적분에는 영향을 주지 않습니다.
 
 `swift test`는 정확히 ±90도/180도 자세의 독립 조작, 역방향 드래그 복원, 90도 통과, 20,000회 누적 회전의 정규화·직교성, 화면 밖 반대 방향 입력과 잘못된 뷰 크기를 포함해 총 12개 테스트를 통과했습니다.
+
+### M51 근사 모델 (v1.2)
+
+메뉴 맨 위에 **M51 · 소용돌이 은하**를 추가해 총 11개 사례가 되었습니다. 처음 실행하면 M51이 열립니다. 연구 자료와 실제 단위, 별 팽대부, 초기 궤도 및 근사의 범위는 [M51 모델 문서](M51.md)를 참고하세요.

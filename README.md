@@ -4,7 +4,7 @@
 
 두 은하가 접근하고, 서로를 변형시키고, 조석 꼬리를 만드는 과정을 실시간으로 관찰합니다. SwiftUI로 조작하고 Metal compute shader로 별과 암흑물질의 중력을 계산합니다. 외부 패키지 의존성은 없습니다.
 
-![macOS Galaxy Lab 1.1의 막대 은하 형성 화면](docs/images/macos-bar.jpg)
+![macOS Galaxy Lab 1.2의 M51 근사 모델 화면](docs/images/macos-m51.jpg)
 
 > 실제 macOS 앱 화면입니다. 파랑과 주황은 각 입자가 처음 속했던 은하를 나타냅니다. 일시 정지 화면의 FPS는 물리 계산 성능을 뜻하지 않습니다.
 
@@ -12,7 +12,7 @@
 
 - **살아 있는 중력장** — 별과 암흑물질 모두 중력원으로 참여하며, 분포가 바뀔 때마다 힘을 다시 계산합니다.
 - **최대 131,072개 질량 입자** — 별 8,192 / 16,384 / 32,768 / 65,536개와 같은 수의 암흑물질 입자.
-- **10개 시나리오** — 기존 충돌·단독 검증에 왜소은하 해체, 고리 은하, 순행·역행 비교, 껍질 은하, 막대 형성을 추가했습니다.
+- **11개 시나리오** — M51 근사 모델, 충돌·단독 검증, 왜소은하 해체, 고리 은하, 순행·역행 비교, 껍질 은하, 막대 형성.
 - **관측 조작** — 쿼터니언 트랙볼로 모든 방향 회전, 확대, 별 밝기, 위에서 보기, 암흑물질 분포 표시. 카메라에 Euler 각도 제한을 두지 않습니다.
 - **MP4 녹화** — UI를 제외한 은하 장면을 무음 H.264 영상으로 저장하고 미리보기·내보내기·공유.
 - **iOS / macOS 공통 코드** — SwiftUI + MTKView, GPU에서 물리 계산과 렌더링 수행.
@@ -64,6 +64,16 @@ xcodebuild -project GalaxyCollision.xcodeproj -scheme GalaxyCollision \
 
 같은 조석 꼬리 시나리오를 진행한 실제 앱 화면입니다. 충돌 경로와 감속을 애니메이션으로 지정하지 않고 입자들의 중력 상호작용으로 계산합니다.
 
+## M51 · 소용돌이 은하 (v1.2)
+
+처음 실행하면 **M51 · 소용돌이 은하**가 열립니다. Tress et al. (2020)의 M51 모델을 바탕으로 질량, 원반 크기, 초기 상대 위치·속도를 반영한 별 + 암흑물질 실험입니다. 중심 팽대부도 별 입자로 계산하며 나선팔이나 동반 은하 경로를 강제로 지정하지 않습니다.
+
+M51의 `ELAPSED · Myr`는 초기 상태부터 흐른 시간을 백만 년 단위로 표시합니다. **150–400 Myr** 구간의 조석 나선 구조를 관찰하세요. 파랑은 M51, 주황은 NGC 5195의 입자 식별색입니다.
+
+가스 질량은 충돌 없는 원반 질량으로 합산했고, 중심부·헤일로·동반 은하의 밀도 분포에는 해상도에 맞춘 근사가 있습니다. 관측 사진이나 논문 시뮬레이션의 정밀 복제는 아닙니다. [적용한 수치·출처·검증](docs/M51.md)을 확인할 수 있습니다.
+
+![M51 근사 모델의 실제 GPU 적분 결과](docs/images/m51-evolution.png)
+
 ## 새 은하 실험 (v1.1)
 
 시나리오 메뉴에서 **왜소은하 해체 → 고리 은하 → 순행 / 역행 충돌 → 껍질 은하 → 막대 은하 형성**을 선택할 수 있습니다. 각 사례에 맞는 시야와 관측 시점 안내를 제공하며, 동반 은하 별 강조로 희미한 흐름과 껍질을 관찰할 수 있습니다.
@@ -105,7 +115,7 @@ Apple M2 Pro, 같은 초기 조건에서 측정한 중력 재계산 시간입니
 ```sh
 swift test
 
-swiftc -O GalaxyCollision/Physics/Encounter.swift \
+swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift \
   GalaxyCollision/Physics/EquilibriumTables.swift \
   GalaxyCollision/Rendering/GalaxyDynamics.swift \
   Scripts/MetalSmoke.swift -o /tmp/galaxy-live-smoke

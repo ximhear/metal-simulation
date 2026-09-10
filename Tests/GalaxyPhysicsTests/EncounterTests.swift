@@ -5,7 +5,7 @@ import simd
 final class EncounterTests: XCTestCase {
     func testSharedMetalLayout() {
         XCTAssertEqual(MemoryLayout<Particle>.stride, 32)
-        XCTAssertEqual(MemoryLayout<DynamicsUniforms>.stride, 176)
+        XCTAssertEqual(MemoryLayout<DynamicsUniforms>.stride, 208)
         XCTAssertEqual(MemoryLayout<DynamicsUniforms>.offset(of: \.count), 64)
         XCTAssertEqual(MemoryLayout<DynamicsUniforms>.offset(of: \.dt), 80)
     }

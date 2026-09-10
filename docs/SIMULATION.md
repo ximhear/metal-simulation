@@ -81,12 +81,12 @@ SwiftUI + Metal로 만든 iOS / macOS 은하 충돌 시뮬레이션입니다. �
 swift test
 xcodebuild -project GalaxyCollision.xcodeproj -scheme GalaxyCollision -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
 xcodebuild -project GalaxyCollision.xcodeproj -scheme GalaxyCollision -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/MetalSmoke.swift -o /tmp/galaxy-live-smoke
+swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/MetalSmoke.swift -o /tmp/galaxy-live-smoke
 /tmp/galaxy-live-smoke
 GALAXY_TEST_COLLISION=1 GALAXY_TEST_STEPS=6000 /tmp/galaxy-live-smoke
-swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/GravityBenchmark.swift -o /tmp/galaxy-gravity-benchmark
+swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/GravityBenchmark.swift -o /tmp/galaxy-gravity-benchmark
 /tmp/galaxy-gravity-benchmark
-swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/GravityAccuracy.swift -o /tmp/galaxy-gravity-accuracy
+swiftc -O GalaxyCollision/Physics/Encounter.swift GalaxyCollision/Physics/M51Model.swift GalaxyCollision/Physics/EquilibriumTables.swift GalaxyCollision/Rendering/GalaxyDynamics.swift Scripts/GravityAccuracy.swift -o /tmp/galaxy-gravity-accuracy
 /tmp/galaxy-gravity-accuracy
 swiftc -parse-as-library GalaxyCollision/Recording/GalaxyRecorder.swift Scripts/RecordingSmoke.swift -o /tmp/galaxy-recording-smoke
 /tmp/galaxy-recording-smoke
@@ -96,7 +96,7 @@ swiftc -parse-as-library GalaxyCollision/Recording/GalaxyRecorder.swift Scripts/
 
 ### 측정 결과 — Apple M2 Pro, 2026-09-09–10
 
-- Swift 테스트 12개(새 모델과 쿼터니언 트랙볼 검증 포함): 초기 조건 테이블의 유한성/단조성, 데이터 레이아웃, 단독 은하/충돌 초기 조건.
+- Swift 테스트 15개(M51 단위·궤도·팽대부와 쿼터니언 트랙볼 검증 포함): 초기 조건 테이블의 유한성/단조성, 데이터 레이아웃, 단독 은하/충돌 초기 조건.
 - GPU 힘 검증: 1,024개 입자에서 직접 합산 대비 상대 RMS 오차 약 **0.34%**. 별도 CPU 두 입자 해석해, 자기 힘 제외, 트리의 총질량, 실제 질량 입자 이동에 대한 중력 반응도 확인. 동일 위치, 밀집 입자 + 먼 입자, 2의 거듭제곱이 아닌 개수도 검사하며 직접 합산 대비 RMS 오차는 모두 1% 미만입니다.
 - 단독 은하: 1,800스텝(30 시간 단위) 후 원반 반질량 반지름 **+3.1%**, 수직 RMS 두께 **+17.7%**, 헤일로 반질량 반지름 **−0.34%**, 총에너지 변화 **0.00083%**. 두께 변화는 0이 아니며 근사 초기 조건/이산 입자 효과의 한계입니다.
 - 기본 충돌: 6,000스텝(약 100 시간 단위)을 GPU 오류 없이 통과. 처음 중심부에 있던 별들의 두 질량중심 간 거리가 **24 → 약 0.077**, 전체 에너지 변화 약 **0.0046%**. 이 중심 추적 지표 하나만으로 모든 물질이 합쳐졌다고 판정하지는 않습니다.
@@ -128,3 +128,7 @@ swiftc -parse-as-library GalaxyCollision/Recording/GalaxyRecorder.swift Scripts/
 참고: [Barnes & Hut 계열 트리 코드](https://home.ifa.hawaii.edu/users/barnes/pub.html), [galpy의 Eddington 역산 설명](https://docs.galpy.org/en/latest/reference/dfeddington.html), [평형 은하 초기 조건의 중요성](https://arxiv.org/abs/1402.1623), [NASA/ESA의 은하 충돌 시각화](https://esahubble.org/videos/gal_coll_dome_3800/).
 
 트리 구현 참고: [Karras, HPG 2012 — Parallel construction of binary radix trees](https://research.nvidia.com/publication/2012-06_maximizing-parallelism-construction-bvhs-octrees-and-k-d-trees).
+
+### M51 확장 (v1.2)
+
+별 입자 예산 안에 팽대부를 추가했습니다. 팽대부와 헤일로는 각각의 밀도에 대해 원반+팽대부+헤일로의 총 구형화 퍼텐셜에서 속도 분포를 구합니다. GPU 초기화는 두 성분의 별도 반지름·속도 표를 사용합니다. Swift/Metal 공통 DynamicsUniforms는 208바이트이며 기존 필드 오프셋은 유지합니다. 상세 물리 수치와 검증은 [M51.md](M51.md)에 있습니다.

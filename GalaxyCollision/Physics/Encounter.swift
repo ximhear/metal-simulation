@@ -2,6 +2,7 @@ import Foundation
 import simd
 
 public enum EncounterPreset: String, CaseIterable, Identifiable {
+    case m51 = "M51 · 소용돌이 은하"
     case tidal = "조석 꼬리"
     case headOn = "정면 충돌"
     case flyby = "스쳐 지나가기"
@@ -16,6 +17,7 @@ public enum EncounterPreset: String, CaseIterable, Identifiable {
     public var isSingle: Bool { self == .isolated || self == .bar }
     public var icon: String {
         switch self {
+        case .m51: return "sparkles"
         case .tidal: return "hurricane"
         case .headOn: return "arrow.right.and.line.vertical.and.arrow.left"
         case .flyby: return "arrow.up.right"
@@ -30,6 +32,7 @@ public enum EncounterPreset: String, CaseIterable, Identifiable {
     }
     public var detail: String {
         switch self {
+        case .m51: return "M51과 NGC 5195의 연구 모델 질량·초기 궤도를 반영했습니다. 별과 암흑물질의 근사 모델이며, 가스·먼지와 사진의 색은 재현하지 않습니다."
         case .tidal: return "별과 암흑물질이 함께 변형되며 궤도 에너지를 주고받습니다."
         case .headOn: return "중앙을 통과하는 두 은하. 물질 분포가 바뀌며 중력도 달라집니다."
         case .flyby: return "빠른 근접 통과. 붙잡히지 않은 물질은 멀리 빠져나갑니다."
@@ -44,6 +47,7 @@ public enum EncounterPreset: String, CaseIterable, Identifiable {
     }
     public var observation: String {
         switch self {
+        case .m51: return "관측: 동반 은하가 만드는 나선팔 · 경과 150–400 Myr (1 Myr = 백만 년)"
         case .stream: return "관측: 주황 위성의 별이 늘어나는 방향 · 권장 SIM TIME 15–40"
         case .ring: return "관측: 원반을 위에서 본 고리의 반지름 · 권장 SIM TIME 4–15"
         case .prograde, .retrograde: return "비교: 같은 SIM TIME 15–30의 꼬리 · 전환 시 초기화"
@@ -53,10 +57,10 @@ public enum EncounterPreset: String, CaseIterable, Identifiable {
         }
     }
     public var zoom: Double {
-        switch self { case .bar, .isolated: return 2.2; case .ring: return 1.8; case .stream: return 0.85; case .shells: return 0.8; default: return 1 }
+        switch self { case .m51: return 1.3; case .bar, .isolated: return 2.2; case .ring: return 1.8; case .stream: return 0.85; case .shells: return 0.8; default: return 1 }
     }
     public var pitch: Float {
-        switch self { case .ring, .bar, .prograde, .retrograde, .stream, .shells: return 0; default: return 0.42 }
+        switch self { case .m51, .ring, .bar, .prograde, .retrograde, .stream, .shells: return 0; default: return 0.42 }
     }
 }
 
@@ -80,12 +84,21 @@ public struct GalaxyDefinition {
     public var spin: Float = 1
     public var spherical = false
     public var stellarMass: Float = 3
+    public var bulgeMass: Float = 0
+    public var bulgeScale: Float = 0.25
+    public var bulgeCutoff: Float = 2
+    public var haloScale: Float = 3
+    public var haloCutoff: Float = 18
+    public var speedRadius: Float = 64
+    public var diskCutoff: Float = 7
+    public var tiltY: Float = 0
     public var haloMass: Float = 17
     public var height: Float = 0.2
     public var toomreQ: Float = 1.6
-    public var totalMass: Float { (stellarMass + haloMass) * massScale }
+    public var totalMass: Float { (stellarMass + bulgeMass + haloMass) * massScale }
     public var modelUniform: SIMD4<Float> { [massScale, radiusScale, spin, spherical ? 1 : 0] }
-    public var componentUniform: SIMD4<Float> { [stellarMass, haloMass, height, 0] }
+    public var shapeUniform: SIMD4<Float> { [diskCutoff, tiltY, speedRadius, 0] }
+    public var componentUniform: SIMD4<Float> { [stellarMass, haloMass, height, bulgeMass] }
 }
 
 public struct EncounterConfiguration {
@@ -99,6 +112,29 @@ public struct EncounterConfiguration {
 
     public init(preset: EncounterPreset) {
         switch preset {
+        case .m51:
+            // Tress (2020), Tables 2–3; softened/truncated surrogate profiles in docs/M51.md.
+            primary.stellarMass = 5.3; primary.bulgeMass = 0.53; primary.haloMass = 60.4
+            primary.height = 0.6 / M51Model.lengthKpc
+            primary.haloScale = 28.7 / M51Model.lengthKpc
+            primary.haloCutoff = 200 / M51Model.lengthKpc
+            primary.speedRadius = 150
+            primary.bulgeScale = 0.6 / M51Model.lengthKpc
+            primary.bulgeCutoff = 4.8 / M51Model.lengthKpc
+            primary.diskCutoff = 15 / M51Model.lengthKpc
+            primary.tiltY = -20 * .pi / 180
+            primary.toomreQ = 1.5
+            secondary.spherical = true
+            secondary.stellarMass = 2.5; secondary.haloMass = 1.5
+            secondary.radiusScale = 1 / M51Model.lengthKpc
+            primaryFraction = 0.8
+            let separation = (M51Model.position1Kpc - M51Model.position0Kpc) / M51Model.lengthKpc
+            let velocity = M51Model.relativeVelocityKms / M51Model.velocityKms
+            let fraction = secondary.totalMass / (primary.totalMass + secondary.totalMass)
+            center0 = SIMD4(-fraction * separation, -10 * .pi / 180)
+            center1 = SIMD4((1 - fraction) * separation, 0)
+            bulk0 = SIMD4(-fraction * velocity, 0)
+            bulk1 = SIMD4((1 - fraction) * velocity, 0)
         case .headOn: bulk0 = [0.65, 0, 0, 0]; bulk1 = [-0.65, 0, 0, 0]
         case .flyby:
             center0.y = -3; center1.y = 3
@@ -165,6 +201,8 @@ public struct DynamicsUniforms {
     public var component0: SIMD4<Float>
     public var component1: SIMD4<Float>
     public var allocation: SIMD4<UInt32>
+    public var shape0: SIMD4<Float>
+    public var shape1: SIMD4<Float>
 
     public init(starCount: Int, preset: EncounterPreset, seed: UInt32 = 42) {
         let c = EncounterConfiguration(preset: preset)
@@ -176,6 +214,11 @@ public struct DynamicsUniforms {
         component0 = c.primary.componentUniform; component1 = c.secondary.componentUniform
         // Even population counts preserve mirrored pairs at every picker size.
         let first = preset.isSingle ? starCount : max(2, min(starCount - 2, Int(Float(starCount) * c.primaryFraction) / 2 * 2))
-        allocation = [UInt32(first), UInt32(first), 0, 0]
+        func bulgeCount(_ definition: GalaxyDefinition, stars: Int) -> UInt32 {
+            guard definition.bulgeMass > 0 else { return 0 }
+            return UInt32(max(2, min(stars - 2, Int(Float(stars) * definition.bulgeMass / (definition.stellarMass + definition.bulgeMass)) / 2 * 2)))
+        }
+        allocation = [UInt32(first), UInt32(first), bulgeCount(c.primary, stars: first), preset.isSingle ? 0 : bulgeCount(c.secondary, stars: starCount - first)]
+        shape0 = c.primary.shapeUniform; shape1 = c.secondary.shapeUniform
     }
 }

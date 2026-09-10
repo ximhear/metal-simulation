@@ -7,9 +7,9 @@ final class SimulationModel: ObservableObject {
     @Published var isPlaying = true
     @Published var isPreparing = false
     @Published var exposure: Double = 1
-    @Published var zoom: Double = 1
-    @Published var orientation = simd_quatf(angle: 0.42, axis: [1, 0, 0])
-    @Published var preset: EncounterPreset = .tidal
+    @Published var zoom: Double = EncounterPreset.m51.zoom
+    @Published var orientation = Trackball.identity
+    @Published var preset: EncounterPreset = .m51
     #if os(macOS)
     @Published var particleCount = 16_384
     #else
