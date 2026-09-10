@@ -6,7 +6,8 @@ private let panel = Color(red: 0.045, green: 0.061, blue: 0.085)
 struct ContentView: View {
     @StateObject private var model = SimulationModel()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var dragOrigin: SIMD2<Float>?
+    @State private var lastDragPoint: SIMD2<Float>?
+    @GestureState private var isRotating = false
     @State private var zoomOrigin: Double?
     @State private var showInfo = false
     @State private var showControls = true
@@ -74,22 +75,30 @@ struct ContentView: View {
 
     private var universe: some View {
         ZStack {
-            MetalGalaxyView(model: model)
-                .gesture(DragGesture(minimumDistance: 2)
-                    .onChanged { value in
-                        if dragOrigin == nil { dragOrigin = [model.yaw, model.pitch] }
-                        model.yaw = dragOrigin!.x + Float(value.translation.width) * 0.005
-                        model.pitch = max(-1.5, min(1.5, dragOrigin!.y + Float(value.translation.height) * 0.005))
-                    }
-                    .onEnded { _ in dragOrigin = nil })
-                .simultaneousGesture(MagnifyGesture()
-                    .onChanged { value in
-                        if zoomOrigin == nil { zoomOrigin = model.zoom }
-                        model.zoom = max(0.4, min(3, zoomOrigin! * value.magnification))
-                    }
-                    .onEnded { _ in zoomOrigin = nil })
-                .accessibilityLabel("두 은하의 실시간 입자 시뮬레이션")
-                .accessibilityHint("드래그로 회전하고 두 손가락으로 확대합니다. 설정에서도 시점을 조절할 수 있습니다.")
+            GeometryReader { geometry in
+                MetalGalaxyView(model: model)
+                    .gesture(DragGesture(minimumDistance: 2)
+                        .updating($isRotating) { _, rotating, _ in rotating = true }
+                        .onChanged { value in
+                            let start = lastDragPoint ?? SIMD2(Float(value.startLocation.x), Float(value.startLocation.y))
+                            let end = SIMD2(Float(value.location.x), Float(value.location.y))
+                            model.orientation = Trackball.rotate(model.orientation, from: start, to: end,
+                                viewport: SIMD2(Float(geometry.size.width), Float(geometry.size.height)))
+                            lastDragPoint = end
+                        }
+                        .onEnded { _ in lastDragPoint = nil })
+                    .simultaneousGesture(MagnifyGesture()
+                        .onChanged { value in
+                            if zoomOrigin == nil { zoomOrigin = model.zoom }
+                            model.zoom = max(0.4, min(3, zoomOrigin! * value.magnification))
+                        }
+                        .onEnded { _ in zoomOrigin = nil })
+                    .accessibilityLabel("두 은하의 실시간 입자 시뮬레이션")
+                    .accessibilityHint("드래그로 회전하고 두 손가락으로 확대합니다. 설정에서도 시점을 조절할 수 있습니다.")
+            }
+            .onChange(of: isRotating) { _, rotating in
+                if !rotating { lastDragPoint = nil }
+            }
             VStack(alignment: .leading) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 7) {
@@ -168,7 +177,7 @@ struct ContentView: View {
                         Toggle("동반 은하 별 강조", isOn: $model.emphasizeCompanion).font(.system(size: 12))
                     }
                     HStack {
-                        Button("위에서 보기") { model.pitch = 0; model.yaw = 0 }
+                        Button("위에서 보기") { model.orientation = Trackball.identity; lastDragPoint = nil }
                         Spacer()
                         Button("시점 초기화") { model.resetCamera() }
                     }.font(.system(size: 11)).buttonStyle(.plain).foregroundStyle(accent)

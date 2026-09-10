@@ -1,4 +1,5 @@
 import SwiftUI
+import simd
 
 @MainActor
 final class SimulationModel: ObservableObject {
@@ -7,8 +8,7 @@ final class SimulationModel: ObservableObject {
     @Published var isPreparing = false
     @Published var exposure: Double = 1
     @Published var zoom: Double = 1
-    @Published var yaw: Float = 0
-    @Published var pitch: Float = 0.42
+    @Published var orientation = simd_quatf(angle: 0.42, axis: [1, 0, 0])
     @Published var preset: EncounterPreset = .tidal
     #if os(macOS)
     @Published var particleCount = 16_384
@@ -32,7 +32,6 @@ final class SimulationModel: ObservableObject {
 
     func resetCamera() {
         zoom = preset.zoom
-        yaw = 0
-        pitch = preset.pitch
+        orientation = simd_quatf(angle: preset.pitch, axis: [1, 0, 0])
     }
 }

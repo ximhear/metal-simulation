@@ -215,7 +215,7 @@ final class GalaxyRenderer: NSObject, MTKViewDelegate {
                 SIMD4(1 / (halfHeight * aspect), 0, 0, 0),
                 SIMD4(0, 1 / halfHeight, 0, 0),
                 SIMD4(0, 0, 1 / 160, 0), SIMD4(0, 0, 0.5, 1)))
-            let rotation = simd_float4x4(simd_quatf(angle: model.pitch, axis: [1, 0, 0]) * simd_quatf(angle: model.yaw, axis: [0, 1, 0]))
+            let rotation = simd_float4x4(model.orientation)
             let density = min(2.0, sqrt(Float(32_768) / Float(max(count, 1))))
             var uniforms = RenderUniforms(transform: projection * rotation,
                                           appearance: [pointScale, Float(model.exposure) * density * 0.65, model.emphasizeCompanion && !model.preset.isSingle ? 1 : 0, 0])

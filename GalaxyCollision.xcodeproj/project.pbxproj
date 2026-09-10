@@ -18,6 +18,7 @@
 		8771C1C55BFAD852878ED5B0 /* GalaxyPreparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612C136697432481B030FC27 /* GalaxyPreparation.swift */; };
 		8912A0C05C155B3E2257114A /* MetalGalaxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8DBF19337B31349DA84B75 /* MetalGalaxyView.swift */; };
 		97428F648DF8A0078DFF5888 /* EquilibriumTables.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68642FFD0C7F8A2712187DC9 /* EquilibriumTables.swift */; };
+		C2BDB680313581E527DE11B9 /* Trackball.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D48AC4901756E434322A1C4 /* Trackball.swift */; };
 		CCEA74988DEF04E00744EACF /* GalaxyDynamics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29CE5AD0C0D17083C9A84682 /* GalaxyDynamics.swift */; };
 		ED63631F794CA7765FCE53AB /* GalaxyRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF09D37A62BFEC01702C3BD2 /* GalaxyRenderer.swift */; };
 /* End PBXBuildFile section */
@@ -31,6 +32,7 @@
 		612C136697432481B030FC27 /* GalaxyPreparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalaxyPreparation.swift; sourceTree = "<group>"; };
 		68642FFD0C7F8A2712187DC9 /* EquilibriumTables.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquilibriumTables.swift; sourceTree = "<group>"; };
 		8F8DBF19337B31349DA84B75 /* MetalGalaxyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalGalaxyView.swift; sourceTree = "<group>"; };
+		9D48AC4901756E434322A1C4 /* Trackball.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trackball.swift; sourceTree = "<group>"; };
 		A046C3C42DBE81108EC38427 /* Encounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Encounter.swift; sourceTree = "<group>"; };
 		A531B0C7F7C36AAC1615B4F9 /* GalaxyCollisionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalaxyCollisionApp.swift; sourceTree = "<group>"; };
 		A5E8CAB6EADC8B6A03ED35C4 /* GalaxyCollision.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GalaxyCollision.entitlements; sourceTree = "<group>"; };
@@ -79,6 +81,7 @@
 			children = (
 				A046C3C42DBE81108EC38427 /* Encounter.swift */,
 				68642FFD0C7F8A2712187DC9 /* EquilibriumTables.swift */,
+				9D48AC4901756E434322A1C4 /* Trackball.swift */,
 			);
 			path = Physics;
 			sourceTree = "<group>";
@@ -176,6 +179,7 @@
 				7617D4050E429C975542E341 /* RecordingControls.swift in Sources */,
 				5E575B6A80FBFEB22E43AD1F /* ScenarioPicker.swift in Sources */,
 				530D61B59C4AC8BE7E75DA15 /* SimulationModel.swift in Sources */,
+				C2BDB680313581E527DE11B9 /* Trackball.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,7 +220,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -232,7 +236,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -277,7 +281,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -299,7 +303,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
